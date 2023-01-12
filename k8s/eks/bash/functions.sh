@@ -252,17 +252,17 @@ check_ng_stack_state(){
 }
 
 create_node_group(){
-  eksctl create nodegroup --config-file=$real_path/.cluster/$CLUSTER_NAME-$REGION.yaml
+  eksctl create nodegroup --config-file=$real_path/.cluster/$CLUSTER_NAME-$REGION.yaml --skip-outdated-addons-check=true
   echo "node_group_created=true" >> $real_path/.cluster/$CLUSTER_NAME-$REGION.cs
 }
 
 create_iam_service_accounts(){
   eksctl utils associate-iam-oidc-provider --config-file=$real_path/.cluster/$CLUSTER_NAME-$REGION.yaml --approve
-  eksctl create iamserviceaccount --config-file=$real_path/.cluster/$CLUSTER_NAME-$REGION.yaml --approve
+  eksctl create iamserviceaccount --config-file=$real_path/.cluster/$CLUSTER_NAME-$REGION.yaml --approve --override-existing-serviceaccounts
 }
 
 install_eks_add_on(){
-  csi_driver_role_arn=$(eksctl get iamserviceaccount --cluster $CLUSTER_NAME | grep ebs-csi-controller-sa | cut -f 3)
+  csi_driver_role_arn=$(eksctl get iamserviceaccount --cluster $CLUSTER_NAME --region $REGION | grep ebs-csi-controller-sa | cut -f 3)
   cat <<EOT > $real_path/.cluster/$CLUSTER_NAME-$REGION-add-on.yaml
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
@@ -399,7 +399,7 @@ helm_infra_install_redis(){
 
 helm_infra_install_influx_db(){
   if ! helm ls | grep --quiet influxdb; then
-    helm install influxdb bitnami/influxdb -f $real_path/yaml/influxdb/values.yml --set image.tag=1.8.2 --set image.debug=true --version 2.6.1
+    helm install influxdb bitnami/influxdb -f $real_path/yaml/influxdb/values.yml --set image.tag=1.8.2 --set image.debug=true --version 5.4.14
   else
     echo "Helm influxdb already exists, skipping to the next step."
   fi
